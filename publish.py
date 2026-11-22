@@ -123,6 +123,33 @@ def main() -> None:
     print(f"Published media {media_id}")
     print(f"Permalink: {info.get('permalink')}")
 
+    # 5) Log to data/posts.csv (read by the Google Sheet via IMPORTDATA)
+    topic_file = folder / "topic.txt"
+    topic = topic_file.read_text(encoding="utf-8").strip() if topic_file.exists() else ""
+    log_post(date, topic, len(images), media_id, info)
+
+
+def log_post(date: str, topic: str, cards: int, media_id: str, info: dict) -> None:
+    import csv
+    from datetime import datetime, timedelta, timezone
+
+    path = Path("data/posts.csv")
+    path.parent.mkdir(exist_ok=True)
+    new = not path.exists()
+    ts = info.get("timestamp", "")
+    try:
+        kst = datetime.strptime(ts, "%Y-%m-%dT%H:%M:%S%z").astimezone(timezone(timedelta(hours=9)))
+        published = kst.strftime("%Y-%m-%d %H:%M")
+    except ValueError:
+        published = ts
+    with path.open("a", newline="", encoding="utf-8") as f:
+        w = csv.writer(f)
+        if new:
+            w.writerow(["published_kst", "card_date", "topic", "cards", "media_id", "permalink"])
+        # media_id gets an "id_" prefix so spreadsheets keep it as text (18+ digits).
+        w.writerow([published, date, topic, cards, f"id_{media_id}", info.get("permalink", "")])
+    print(f"Logged to {path}")
+
 
 if __name__ == "__main__":
     TOKEN = os.environ.get("IG_ACCESS_TOKEN", "")

@@ -1,0 +1,33 @@
+name: Collect engagement
+
+# Daily at 08:47 KST (23:47 UTC), and on demand.
+on:
+  schedule:
+    - cron: "47 23 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: repo-write
+  cancel-in-progress: false
+
+jobs:
+  metrics:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Collect metrics
+        env:
+          IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
+        run: python metrics.py
+      - name: Commit metrics
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if [ -f data/metrics.csv ]; then git add data/metrics.csv; fi
+          git diff --cached --quiet || git commit -m "Update engagement metrics"
+          git push
