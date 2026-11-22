@@ -1,0 +1,35 @@
+name: Publish card news
+
+# Manual trigger only. Run this only after the post has been approved.
+on:
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "Folder under cards/ to publish (YYYY-MM-DD)"
+        required: true
+      ai_label:
+        description: "Add Instagram AI info label"
+        required: false
+        default: "true"
+
+concurrency:
+  group: publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Publish carousel
+        env:
+          IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
+          IG_USER_ID: ${{ secrets.IG_USER_ID }}
+          CARD_DATE: ${{ inputs.date }}
+          AI_LABEL: ${{ inputs.ai_label }}
+        run: python publish.py
